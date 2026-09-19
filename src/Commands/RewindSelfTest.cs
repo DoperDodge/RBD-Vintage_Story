@@ -80,6 +80,8 @@ namespace Shinimodori.Commands
             var sb = new StringBuilder();
             void Say(string s) { sb.AppendLine(s); Api.Logger.Notification("[shinimodori selftest] " + s); }
 
+            runTag = Guid.NewGuid().ToString("N").Substring(0, 8);
+
             try
             {
                 bool savedFuzz = server.Cfg.Debug.FuzzJournalFailures;
@@ -281,6 +283,13 @@ namespace Shinimodori.Commands
 
         private const string TestEntityCode = "game:chicken-hen";
 
+        /// <summary>
+        /// Stamped on the entities this run spawns. A SafeMode run leaves the world
+        /// untouched by design, so its creatures outlive it — without a per-run tag the
+        /// next run would count those survivors as its own failure.
+        /// </summary>
+        private string runTag;
+
         private int SpawnTestEntities(BlockPos origin, int count)
         {
             var type = Api.World.GetEntityType(new AssetLocation(TestEntityCode));
@@ -293,7 +302,7 @@ namespace Shinimodori.Commands
                 if (e == null) continue;
                 e.ServerPos.SetPos(origin.X + (i % 3) - 1 + 0.5, origin.Y + 4, origin.Z + (i / 3) + 0.5);
                 e.Pos.SetFrom(e.ServerPos);
-                e.WatchedAttributes.SetBool("sm:selftest", true);
+                e.WatchedAttributes.SetString("sm:selftestRun", runTag);
                 Api.World.SpawnEntity(e);
                 made++;
             }
@@ -305,7 +314,7 @@ namespace Shinimodori.Commands
             var around = Api.World.GetEntitiesAround(
                 new Vec3d(origin.X, origin.Y, origin.Z), 24, 24,
                 e => e != null && e.Alive && !(e is EntityPlayer) && !(e is EntityItem)
-                     && !e.WatchedAttributes.GetBool("sm:selftest"));
+                     && e.WatchedAttributes.GetString("sm:selftestRun") == null);
 
             int killed = 0;
             foreach (var e in around)
@@ -321,7 +330,8 @@ namespace Shinimodori.Commands
         {
             int n = 0;
             foreach (var kv in Api.World.LoadedEntities)
-                if (kv.Value != null && kv.Value.Alive && kv.Value.WatchedAttributes.GetBool("sm:selftest")) n++;
+                if (kv.Value != null && kv.Value.Alive &&
+                    kv.Value.WatchedAttributes.GetString("sm:selftestRun") == runTag) n++;
             return n;
         }
     }

@@ -1,0 +1,79 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # The dedicated-server package is publicly downloadable and carries the API
+      # assemblies the mod compiles against. Nothing from it is committed or shipped.
+      VS_VERSION: "1.22.7"
+      VINTAGE_STORY: /opt/vs
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache the Vintage Story server package
+        id: vs-cache
+        uses: actions/cache@v4
+        with:
+          path: /opt/vs
+          key: vs-server-${{ env.VS_VERSION }}
+
+      - name: Download Vintage Story ${{ env.VS_VERSION }} server
+        if: steps.vs-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /opt/vs
+          curl -sSL --retry 3 --retry-delay 5 \
+            "https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_${VS_VERSION}.tar.gz" \
+            -o /tmp/vs_server.tar.gz
+          sudo tar -xzf /tmp/vs_server.tar.gz -C /opt/vs
+          test -f /opt/vs/VintagestoryAPI.dll
+
+      - name: Build the mod
+        run: dotnet build Shinimodori.csproj -c Release --nologo
+
+      - name: Taboo corpus must pass 100%
+        run: |
+          dotnet build tests/TabooTests/TabooTests.csproj -c Release --nologo
+          dotnet tests/TabooTests/bin/Release/net10.0/TabooTests.dll tests/TabooCorpus.json
+
+      - name: Assets must parse with the game's own JSON reader
+        run: |
+          dotnet build tools/AssetCheck/AssetCheck.csproj -c Release --nologo
+          dotnet tools/AssetCheck/bin/Release/net10.0/AssetCheck.dll assets
+
+      - name: Generated assets must match their generators
+        run: |
+          python3 -m pip install --quiet numpy soundfile
+          # Regenerating must be a no-op: a committed asset that the script no longer
+          # produces means the two have drifted apart.
+          python3 scripts/generate_textures.py
+          git diff --exit-code -- assets/shinimodori/textures
+
+      - name: Package the mod
+        run: |
+          set -euo pipefail
+          mkdir -p dist/shinimodori
+          cp bin/Release/Shinimodori.dll modinfo.json dist/shinimodori/
+          cp -r assets dist/shinimodori/
+          cd dist && zip -qr shinimodori.zip shinimodori
+          unzip -l shinimodori.zip | tail -3
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shinimodori
+          path: dist/shinimodori.zip

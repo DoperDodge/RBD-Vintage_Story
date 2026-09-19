@@ -7,6 +7,11 @@ noise and envelopes -- so the mod ships no recording from any source and there
 is no question about where any of it came from.
 
 Re-run after changing anything:  python3 scripts/generate_sounds.py
+
+The synthesis itself is seeded and reproducible, but the .ogg bytes are not:
+every Ogg stream carries a randomly chosen serial number in its page headers,
+so two encodes of identical audio differ. Compare by listening, not by hash —
+which is why CI checks the textures for drift and not these.
 """
 import os
 import numpy as np
