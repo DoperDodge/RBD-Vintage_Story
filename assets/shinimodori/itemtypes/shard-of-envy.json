@@ -1,0 +1,16 @@
+{
+	code: "shard-of-envy",
+	// Consumed to receive the blessing when blessingMode is "item" (§3). Useful on
+	// existing worlds and on servers where exactly one player should hold it.
+	class: "WitchGift",
+	shape: { base: "game:item/basic/flat" },
+	textures: { "tex": { base: "shinimodori:item/shard-of-envy" } },
+	creativeinventory: { "general": ["*"], "items": ["*"] },
+	maxstacksize: 1,
+	materialDensity: 3000,
+	attributes: { shinimodoriBlessing: true },
+	guiTransform: { rotation: { x: 0, y: 0, z: 0 }, scale: 1.9 },
+	groundTransform: { scale: 2.6 },
+	fpHandTransform: { translation: { x: 0.1, y: 0.1, z: 0 }, scale: 1.4 },
+	tpHandTransform: { translation: { x: -0.1, y: -0.1, z: -0.5 }, scale: 0.7 }
+}

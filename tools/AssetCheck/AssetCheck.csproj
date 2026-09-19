@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>AssetCheck</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VSDir Condition="'$(VSDir)' == ''">$(VINTAGE_STORY)</VSDir>
+    <VSDir Condition="'$(VSDir)' == ''">/opt/vs</VSDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json"><HintPath>$(VSDir)/Lib/Newtonsoft.Json.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

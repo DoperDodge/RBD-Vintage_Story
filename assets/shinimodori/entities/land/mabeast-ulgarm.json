@@ -1,0 +1,122 @@
+{
+	code: "mabeast-ulgarm",
+	class: "EntityAgent",
+	tags: ["animal", "predator", "ferocious", "habitat-land"],
+	weight: 90,
+	hitboxSize: { x: 1.35, y: 1.15 },
+	deadHitboxSize: { x: 1.15, y: 0.85 },
+	eyeHeight: 1.0,
+	drops: [],
+	attributes: {
+		killedByInfoText: "deadcreature-eaten-large"
+	},
+	client: {
+		renderer: "Shape",
+		// The Ulgarm borrows the wolf's rig at runtime and wears an original
+		// black coat over it. Nothing of the game's own art is redistributed.
+		shape: { base: "game:entity/animal/mammal/wolf/eurasian-adult" },
+		size: 1.18,
+		texture: { base: "shinimodori:entity/mabeast-ulgarm" },
+		glowLevel: 2,
+		behaviors: [
+			{ code: "repulseagents" },
+			{ code: "controlledphysics", stepHeight: 1.1251 },
+			{ code: "floatupwhenstuck", onlyWhenDead: true },
+			{ code: "interpolateposition" },
+			{ code: "harvestable" }
+		],
+		animations: [
+			{ code: "hurt", animation: "hurt", animationSpeed: 2.2, weight: 10, blendMode: "AddAverage" },
+			{ code: "die", animation: "death", animationSpeed: 1.25, weight: 10, blendMode: "Average",
+			  triggeredBy: { onControls: ["dead"] } },
+			{ code: "idle", animation: "idle", blendMode: "AddAverage", easeOutSpeed: 4,
+			  triggeredBy: { defaultAnim: true } },
+			{ code: "attack-withwindup", animation: "attack-withwindup", animationSpeed: 1,
+			  blendMode: "Average", weight: 100 },
+			// Unnaturally smooth: the run is slowed and eased so it never reads
+			// like an animal picking its feet up.
+			{ code: "Walk", animation: "Walk", animationSpeed: 1.6, weight: 5,
+			  easeInSpeed: 2, easeOutSpeed: 2, blendMode: "Average" },
+			{ code: "Run", animation: "Run", animationSpeed: 1.75, weight: 8,
+			  easeInSpeed: 1.5, easeOutSpeed: 1.5, blendMode: "Average" }
+		]
+	},
+	server: {
+		behaviors: [
+			{ code: "repulseagents" },
+			{ code: "controlledphysics", stepHeight: 1.1251 },
+			// Deliberately no "despawn": at tier 3 and above they do not lose you.
+			{ code: "health", currenthealth: 22, maxhealth: 22 },
+			{ code: "deaddecay", hoursToDecay: 24, decayedBlock: "carcass-medium" },
+			{ code: "floatupwhenstuck", onlyWhenDead: true },
+			{ code: "harvestable", drops: [
+				{ type: "item", code: "shinimodori:mabeast-pelt", quantity: { avg: 1, var: 0 } },
+				{ type: "item", code: "game:bushmeat-raw", quantity: { avg: 3, var: 1 } }
+			] },
+			{ code: "breathe" },
+			{
+				code: "emotionstates",
+				states: [
+					{ code: "aggressiveondamage", duration: 120, chance: 1, slot: 2, priority: 2, accumType: "noaccum" },
+					{ code: "alarmherdondamage", chance: 1, slot: 1, priority: 1, accumType: "max" }
+				]
+			},
+			{
+				code: "taskai",
+				aiCreatureType: "LandCreature",
+				aitasks: [
+					{
+						code: "meleeattack",
+						entityCodes: ["player"],
+						priority: 2.5,
+						damage: 11,
+						damageTier: 2,
+						damageType: "SlashingAttack",
+						slot: 1,
+						mincooldown: 1200,
+						maxcooldown: 2200,
+						attackDurationMs: 900,
+						damagePlayerAtMs: 550,
+						animation: "attack-withwindup",
+						animationSpeed: 1.6,
+						sound: "shinimodori:sm_mabeast_growl"
+					},
+					{
+						// Long by design. ScentAggroBehavior scales this at runtime by
+						// the nearest blessed player's miasma.
+						code: "seekentity",
+						entityCodes: ["player"],
+						priority: 2.4,
+						movespeed: 0.055,
+						seekingRange: 45,
+						animation: "Run",
+						animationSpeed: 1.75,
+						leapAtTarget: true,
+						leapChance: 0.06,
+						sound: "shinimodori:sm_mabeast_growl"
+					},
+					{
+						code: "wander",
+						priority: 1.0,
+						movespeed: 0.022,
+						animation: "Walk",
+						animationSpeed: 1.4,
+						preferredLightLevel: 2
+					},
+					{ code: "lookaround", priority: 0.5 }
+				]
+			}
+		],
+		spawnconditions: {
+			// Never spawned by worldgen. They arrive because of you (§6.4).
+			worldgen: { triesPerChunk: { avg: 0, var: 0 } }
+		}
+	},
+	sounds: {
+		hurt: "shinimodori:sm_mabeast_growl",
+		death: "shinimodori:sm_mabeast_growl",
+		idle: "shinimodori:sm_mabeast_howl"
+	},
+	idleSoundChance: 0.012,
+	idleSoundRange: 48
+}
