@@ -94,12 +94,12 @@ namespace Shinimodori.Core
                 return false;
             }
 
-            float stability = GetTemporalStability(e.ServerPos.AsBlockPos);
+            float stability = GetTemporalStability(e.Pos.AsBlockPos);
             if (stability < Cfg.Anchors.MinTemporalStability) { blockedBy = "unstable ground"; return false; }
 
             if (Cfg.Anchors.StormsBlockAnchors && IsTemporalStormActive()) { blockedBy = "temporal storm"; return false; }
 
-            if (HostileWithin(e.ServerPos.XYZ, Cfg.Anchors.NoHostilesWithin)) { blockedBy = "hostiles nearby"; return false; }
+            if (HostileWithin(e.Pos.XYZ, Cfg.Anchors.NoHostilesWithin)) { blockedBy = "hostiles nearby"; return false; }
 
             return true;
         }
@@ -148,7 +148,7 @@ namespace Shinimodori.Core
             if (e == null) return null;
 
             // Depth: descending past a new floor for the first time.
-            int y = (int)e.ServerPos.Y;
+            int y = (int)e.Pos.Y;
             foreach (int depth in new[] { 0, -40, -100 })
             {
                 // Depths are expressed relative to sea level, which is where the player's
@@ -158,7 +158,7 @@ namespace Shinimodori.Core
             }
 
             // A new region cell, survived for a while.
-            long cell = RegionCell(e.ServerPos.AsBlockPos);
+            long cell = RegionCell(e.Pos.AsBlockPos);
             if (!regionDwell.TryGetValue(plr.PlayerUID, out var dwell) || dwell.cell != cell)
             {
                 regionDwell[plr.PlayerUID] = (cell, now);
@@ -282,7 +282,7 @@ namespace Shinimodori.Core
                 AnchorReason = reason,
                 DeathsAtThisAnchor = 0,
             };
-            rp.SetOrigin(plr.Entity.ServerPos.AsBlockPos);
+            rp.SetOrigin(plr.Entity.Pos.AsBlockPos);
 
             // Every player is captured, not just the returner: in soloReturner mode the
             // whole world rewinds, and the others must come back with it (§13).
@@ -335,7 +335,7 @@ namespace Shinimodori.Core
                     {
                         EntityId = e.EntityId,
                         EntityCode = e.Code?.ToString() ?? "",
-                        X = e.ServerPos.X, Y = e.ServerPos.Y, Z = e.ServerPos.Z,
+                        X = e.Pos.X, Y = e.Pos.Y, Z = e.Pos.Z,
                         Data = JournalRecorder.SerializeEntity(e),
                     });
                 }

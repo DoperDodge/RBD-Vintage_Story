@@ -111,7 +111,7 @@ namespace Shinimodori.Miasma
             foreach (var p in server.BlessedPlayers())
             {
                 if (p.Entity == null) continue;
-                double d = p.Entity.ServerPos.XYZ.SquareDistanceTo(from);
+                double d = p.Entity.Pos.XYZ.SquareDistanceTo(from);
                 if (d < bestDist) { bestDist = d; best = p; }
             }
             return best == null ? (null, 0) : (best, TierIndexFor(best, server.StateOf(best)));
@@ -368,7 +368,7 @@ namespace Shinimodori.Miasma
             }
 
             int count = M.MabeastPackMin + Api.World.Rand.Next(Math.Max(1, M.MabeastPackMax - M.MabeastPackMin + 1));
-            var centre = plr.Entity.ServerPos.XYZ;
+            var centre = plr.Entity.Pos.XYZ;
             if (!packs.TryGetValue(plr.PlayerUID, out var list)) list = packs[plr.PlayerUID] = new List<long>();
 
             int spawned = 0;
@@ -378,9 +378,8 @@ namespace Shinimodori.Miasma
                 if (pos == null) continue;
 
                 var e = Api.ClassRegistry.CreateEntity(type);
-                e.ServerPos.SetPos(pos);
-                e.ServerPos.Yaw = (float)(Api.World.Rand.NextDouble() * Math.PI * 2);
-                e.Pos.SetFrom(e.ServerPos);
+                e.Pos.SetPos(pos);
+                e.Pos.Yaw = (float)(Api.World.Rand.NextDouble() * Math.PI * 2);
                 // The scent is yours alone: mark whose it is so they ignore everyone else.
                 e.WatchedAttributes.SetString("sm:huntingUid", plr.PlayerUID);
                 Api.World.SpawnEntity(e);

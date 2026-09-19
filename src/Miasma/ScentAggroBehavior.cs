@@ -65,7 +65,7 @@ namespace Shinimodori.Miasma
             if (!initialised) CacheTasks();
             if (baseRanges.Count == 0) return;
 
-            var (player, tier) = server.Miasma.NearestBlessedScent(entity.ServerPos.XYZ, 200);
+            var (player, tier) = server.Miasma.NearestBlessedScent(entity.Pos.XYZ, 200);
             if (player == null) { ResetRanges(); return; }
 
             float mult = server.Miasma.DetectionMultiplierFor(tier);
@@ -82,7 +82,7 @@ namespace Shinimodori.Miasma
                 // At tier 3 and up the scent is a summons, not a hint.
                 if (tier >= 3 && task.TargetEntity == null)
                 {
-                    double dist = entity.ServerPos.DistanceTo(player.Entity.ServerPos.XYZ);
+                    double dist = entity.Pos.DistanceTo(player.Entity.Pos.XYZ);
                     if (dist <= wanted) task.targetEntity = player.Entity;
                 }
             }

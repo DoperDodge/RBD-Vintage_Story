@@ -85,19 +85,19 @@ namespace Shinimodori.Authority
             {
                 var target = Api.World.GetEntityById(msg.TargetEntityId);
                 if (target == null || !target.Alive) return;
-                if (target.ServerPos.DistanceTo(e.ServerPos.XYZ) > A.GrabRange) return;
+                if (target.Pos.DistanceTo(e.Pos.XYZ) > A.GrabRange) return;
                 if (target is EntityPlayer) return;             // she does not lend you people
 
                 // Grab and yank: pull it in, then hold it still.
-                var pull = e.ServerPos.XYZ.SubCopy(target.ServerPos.XYZ).Normalize() * 0.9;
-                target.ServerPos.Motion.Set(pull.X, Math.Max(0.15, pull.Y), pull.Z);
+                var pull = e.Pos.XYZ.SubCopy(target.Pos.XYZ).Normalize() * 0.9;
+                target.Pos.Motion.Set(pull.X, Math.Max(0.15, pull.Y), pull.Z);
                 stunned[target.EntityId] = Api.World.ElapsedMilliseconds + A.GrabStunSeconds * 1000;
                 kind = 1;
             }
             else if (msg.HasBlockTarget)
             {
-                var pos = new BlockPos(msg.TargetX, msg.TargetY, msg.TargetZ, e.ServerPos.Dimension);
-                if (pos.DistanceTo(e.ServerPos.AsBlockPos) > A.RetrieveRange) return;
+                var pos = new BlockPos(msg.TargetX, msg.TargetY, msg.TargetZ, e.Pos.Dimension);
+                if (pos.DistanceTo(e.Pos.AsBlockPos) > A.RetrieveRange) return;
                 if (!Retrieve(plr, pos)) return;
                 kind = 2;
             }
@@ -123,7 +123,7 @@ namespace Shinimodori.Authority
             if (drops != null)
                 foreach (var stack in drops)
                     if (!plr.InventoryManager.TryGiveItemstack(stack, true))
-                        Api.World.SpawnItemEntity(stack, plr.Entity.ServerPos.XYZ);
+                        Api.World.SpawnItemEntity(stack, plr.Entity.Pos.XYZ);
 
             return true;
         }
@@ -167,7 +167,7 @@ namespace Shinimodori.Authority
                 if (now >= kv.Value) { done.Add(kv.Key); continue; }
                 var e = Api.World.GetEntityById(kv.Key);
                 if (e == null || !e.Alive) { done.Add(kv.Key); continue; }
-                e.ServerPos.Motion.Set(0, e.ServerPos.Motion.Y, 0);
+                e.Pos.Motion.Set(0, e.Pos.Motion.Y, 0);
             }
 
             foreach (var id in done) stunned.Remove(id);

@@ -190,7 +190,7 @@ namespace Shinimodori.Taboo
                     if (plr?.Entity == null) { g.Active = false; continue; }
 
                     // A statue in the world. Other players see them standing perfectly still.
-                    plr.Entity.ServerPos.Motion.Set(0, 0, 0);
+                    plr.Entity.Pos.Motion.Set(0, 0, 0);
 
                     if (g.HealthDrainPerSecond > 0)
                     {
@@ -237,7 +237,7 @@ namespace Shinimodori.Taboo
         /// </summary>
         private void KillListeners(IServerPlayer plr)
         {
-            var centre = plr.Entity.ServerPos.XYZ;
+            var centre = plr.Entity.Pos.XYZ;
             int r = T.ListenerKillRadius;
 
             var nearby = Api.World.GetEntitiesAround(centre, r, r, e =>
@@ -270,7 +270,7 @@ namespace Shinimodori.Taboo
             e.WatchedAttributes.SetBool("sm:gripped", locked);
             if (locked)
             {
-                e.ServerPos.Motion.Set(0, 0, 0);
+                e.Pos.Motion.Set(0, 0, 0);
                 e.Controls.StopAllMovement();
             }
         }

@@ -254,7 +254,7 @@ namespace Shinimodori.Core
                         Kind = isItem ? EntityDeltaKind.ItemSpawned : EntityDeltaKind.Spawned,
                         EntityId = id,
                         EntityCode = entity.Code?.ToString() ?? "",
-                        X = entity.ServerPos.X, Y = entity.ServerPos.Y, Z = entity.ServerPos.Z,
+                        X = entity.Pos.X, Y = entity.Pos.Y, Z = entity.Pos.Z,
                         Data = null,   // undo is "remove"; no state needed
                     });
                 }
@@ -277,7 +277,7 @@ namespace Shinimodori.Core
                         Kind = EntityDeltaKind.Died,
                         EntityId = id,
                         EntityCode = entity.Code?.ToString() ?? "",
-                        X = entity.ServerPos.X, Y = entity.ServerPos.Y, Z = entity.ServerPos.Z,
+                        X = entity.Pos.X, Y = entity.Pos.Y, Z = entity.Pos.Z,
                         Data = SerializeEntity(entity),
                     });
                 }
@@ -313,7 +313,7 @@ namespace Shinimodori.Core
                             Kind = EntityDeltaKind.Drifted,
                             EntityId = id,
                             EntityCode = captured.Code?.ToString() ?? "",
-                            X = captured.ServerPos.X, Y = captured.ServerPos.Y, Z = captured.ServerPos.Z,
+                            X = captured.Pos.X, Y = captured.Pos.Y, Z = captured.Pos.Z,
                             Data = SerializeEntity(captured),
                         });
                     }

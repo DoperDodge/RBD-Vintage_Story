@@ -177,7 +177,7 @@ namespace Shinimodori.Death
 
             // Nothing can touch a returning player (§13).
             plr.Entity.WatchedAttributes.SetBool("sm:returning", true);
-            plr.Entity.ServerPos.Motion.Set(0, 0, 0);
+            plr.Entity.Pos.Motion.Set(0, 0, 0);
 
             if (WorldWideRewind) server.Freezer.Freeze();
 
@@ -223,7 +223,7 @@ namespace Shinimodori.Death
 
         private void RecordDeath(IServerPlayer plr, PlayerState ps, DeathCause cause, string killerName)
         {
-            var pos = plr.Entity.ServerPos.AsBlockPos;
+            var pos = plr.Entity.Pos.AsBlockPos;
             ps.Ledger.Add(new DeathRecord
             {
                 Index = ps.TotalDeaths + 1,
@@ -254,7 +254,7 @@ namespace Shinimodori.Death
                 if (plr?.Entity == null) continue;   // disconnected: resumed on rejoin
 
                 // A returning player is untouchable and motionless for the duration.
-                plr.Entity.ServerPos.Motion.Set(0, 0, 0);
+                plr.Entity.Pos.Motion.Set(0, 0, 0);
 
                 if (now < run.StageEndsAtMs) continue;
 

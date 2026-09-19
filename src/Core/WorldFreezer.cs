@@ -71,7 +71,6 @@ namespace Shinimodori.Core
                     var e = kv.Value;
                     if (e == null || e is EntityPlayer) continue;
 
-                    e.ServerPos.Motion.Set(0, 0, 0);
                     e.Pos.Motion.Set(0, 0, 0);
 
                     if (!frozen.Add(e.EntityId)) continue;

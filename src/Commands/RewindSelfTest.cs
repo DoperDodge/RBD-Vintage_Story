@@ -300,8 +300,7 @@ namespace Shinimodori.Commands
             {
                 var e = Api.ClassRegistry.CreateEntity(type);
                 if (e == null) continue;
-                e.ServerPos.SetPos(origin.X + (i % 3) - 1 + 0.5, origin.Y + 4, origin.Z + (i / 3) + 0.5);
-                e.Pos.SetFrom(e.ServerPos);
+                e.Pos.SetPos(origin.X + (i % 3) - 1 + 0.5, origin.Y + 4, origin.Z + (i / 3) + 0.5);
                 e.WatchedAttributes.SetString("sm:selftestRun", runTag);
                 Api.World.SpawnEntity(e);
                 made++;

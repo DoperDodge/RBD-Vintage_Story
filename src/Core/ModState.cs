@@ -40,7 +40,12 @@ namespace Shinimodori.Core
     /// </summary>
     public class PlayerState
     {
-        public const int Schema = 1;
+        /// <summary>
+        /// 1 — initial.
+        /// 2 — split the tea-party cooldown out of LastTeaPartyHours into its own
+        ///     real-time field; the two were being compared against each other.
+        /// </summary>
+        public const int Schema = 2;
 
         public string PlayerUID = "";
         public bool Blessed;
@@ -58,8 +63,10 @@ namespace Shinimodori.Core
         public bool AuthorityUnlocked;
         public int EchidnaFavor;
         public int EchidnaDebt;
-        /// <summary>Total-hours stamps so cooldowns survive a restart.</summary>
+        /// <summary>Calendar hours of the last tea party, for the once-per-anchor rule.</summary>
         public double LastTeaPartyHours = double.MinValue;
+        /// <summary>Real milliseconds of the last tea party, for the real-time cooldown.</summary>
+        public double LastTeaPartyRealMs = double.MinValue;
         public double LastVoluntaryReturnRealMs = double.MinValue;
         public double LastStage3RealMs = double.MinValue;
         public double AnchorAdvancedAtHours = double.MinValue;
@@ -93,7 +100,8 @@ namespace Shinimodori.Core
 
             w.Write(AuthorityUnlocked);
             w.Write(EchidnaFavor); w.Write(EchidnaDebt);
-            w.Write(LastTeaPartyHours); w.Write(LastVoluntaryReturnRealMs); w.Write(LastStage3RealMs);
+            w.Write(LastTeaPartyHours); w.Write(LastTeaPartyRealMs);
+            w.Write(LastVoluntaryReturnRealMs); w.Write(LastStage3RealMs);
             w.Write(AnchorAdvancedAtHours); w.Write(BreakdownAtAnchorHours);
             w.Write(ResolveUntilHours); w.Write(ForesightUntilHours);
             w.Write(SkipNextPhantomPain);
@@ -109,7 +117,8 @@ namespace Shinimodori.Core
         public static PlayerState Read(BinaryReader r)
         {
             int schema = r.ReadInt32();
-            if (schema != Schema) throw new InvalidDataException($"PlayerState schema {schema} != {Schema}");
+            if (schema < 1 || schema > Schema)
+                throw new InvalidDataException($"PlayerState schema {schema} is not readable by this build (max {Schema})");
 
             var s = new PlayerState
             {
@@ -130,6 +139,9 @@ namespace Shinimodori.Core
             s.EchidnaFavor = r.ReadInt32();
             s.EchidnaDebt = r.ReadInt32();
             s.LastTeaPartyHours = r.ReadDouble();
+            // v1 had no separate real-time stamp; leaving it unset simply means the
+            // first tea party after an upgrade is not held back by a stale cooldown.
+            s.LastTeaPartyRealMs = schema >= 2 ? r.ReadDouble() : double.MinValue;
             s.LastVoluntaryReturnRealMs = r.ReadDouble();
             s.LastStage3RealMs = r.ReadDouble();
             s.AnchorAdvancedAtHours = r.ReadDouble();

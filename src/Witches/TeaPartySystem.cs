@@ -63,13 +63,16 @@ namespace Shinimodori.Witches
             bool eligible = ps.DeathsAtAnchor + 1 >= C.DeathThreshold || ps.Despair >= C.DespairThreshold;
             if (!eligible) return false;
 
-            double now = Api.World.Calendar.TotalHours;
             // Once per anchor: she is not a vending machine.
             if (ps.LastTeaPartyHours > double.MinValue && server.State.Anchor != null &&
                 ps.LastTeaPartyHours >= server.State.Anchor.TotalHours) return false;
 
-            double realMinutes = (Api.World.ElapsedMilliseconds - ps.LastTeaPartyHours) / 60000.0;
-            if (ps.LastTeaPartyHours > double.MinValue && realMinutes < C.CooldownMinutes && realMinutes >= 0) return false;
+            // And a real-time floor on top, so a fast calendar cannot rush her.
+            if (ps.LastTeaPartyRealMs > double.MinValue)
+            {
+                double realMinutes = (Api.World.ElapsedMilliseconds - ps.LastTeaPartyRealMs) / 60000.0;
+                if (realMinutes >= 0 && realMinutes < C.CooldownMinutes) return false;
+            }
 
             bool first = !ps.WitchesMet.Contains("echidna");
             float chance = first ? C.FirstChance : C.RepeatChance;
@@ -87,13 +90,14 @@ namespace Shinimodori.Witches
             sessions[plr.PlayerUID] = session;
 
             ps.LastTeaPartyHours = Api.World.Calendar.TotalHours;
+            ps.LastTeaPartyRealMs = Api.World.ElapsedMilliseconds;
             ps.WitchesMet.Add(witch);
 
             try
             {
                 BuildIslandOnce();
                 plr.Entity.TeleportToDouble(IslandX + 0.5, IslandY + 1, IslandZ + 3.5);
-                plr.Entity.ServerPos.Yaw = (float)Math.PI;
+                plr.Entity.Pos.Yaw = (float)Math.PI;
                 // Gravity, hunger, temperature and damage are all off inside the dream.
                 plr.Entity.WatchedAttributes.SetBool("sm:inDream", true);
             }

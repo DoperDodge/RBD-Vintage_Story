@@ -54,12 +54,12 @@ namespace Shinimodori.Core
             var snap = new PlayerSnapshot
             {
                 PlayerUID = plr.PlayerUID,
-                X = e.ServerPos.X,
-                Y = e.ServerPos.Y,
-                Z = e.ServerPos.Z,
-                Yaw = e.ServerPos.Yaw,
-                Pitch = e.ServerPos.Pitch,
-                Dimension = e.ServerPos.Dimension,
+                X = e.Pos.X,
+                Y = e.Pos.Y,
+                Z = e.Pos.Z,
+                Yaw = e.Pos.Yaw,
+                Pitch = e.Pos.Pitch,
+                Dimension = e.Pos.Dimension,
             };
 
             var watched = e.WatchedAttributes.Clone();
@@ -102,15 +102,12 @@ namespace Shinimodori.Core
             // rewritten; nudge the behaviours so they pick the values back up.
             e.GetBehavior<Vintagestory.GameContent.EntityBehaviorHealth>()?.UpdateMaxHealth();
 
-            e.ServerPos.SetPos(snap.X, snap.Y, snap.Z);
-            e.ServerPos.Yaw = snap.Yaw;
-            e.ServerPos.Pitch = snap.Pitch;
-            e.ServerPos.Dimension = snap.Dimension;
-            e.ServerPos.Motion.Set(0, 0, 0);
-            e.Pos.SetFrom(e.ServerPos);
+            e.Pos.SetPos(snap.X, snap.Y, snap.Z);
+            e.Pos.Yaw = snap.Yaw;
+            e.Pos.Pitch = snap.Pitch;
+            e.Pos.Dimension = snap.Dimension;
             e.Pos.Motion.Set(0, 0, 0);
-
-            e.TeleportTo(e.ServerPos);
+            e.TeleportTo(e.Pos);
 
             plr.BroadcastPlayerData(true);
             e.WatchedAttributes.MarkAllDirty();

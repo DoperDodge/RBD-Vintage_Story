@@ -99,8 +99,9 @@ namespace Shinimodori.Trauma
             // A named modifier, never BaseMaxHealth: the penalty must not bake itself
             // into the save, and it must come off cleanly when it decays.
             float delta = -health.BaseMaxHealth * fraction;
-            if (Math.Abs(delta) < 0.001f) health.MaxHealthModifiers.Remove(MaxHealthModifierKey);
-            else health.SetMaxHealthModifiers(MaxHealthModifierKey, delta);
+            // Zero rather than removing: the dictionary is obsolete to write to
+            // directly, and a zero modifier has exactly the same effect as none.
+            health.SetMaxHealthModifiers(MaxHealthModifierKey, Math.Abs(delta) < 0.001f ? 0f : delta);
             health.UpdateMaxHealth();
 
             if (health.Health > health.MaxHealth) health.Health = health.MaxHealth;
@@ -187,7 +188,7 @@ namespace Shinimodori.Trauma
                 ApplyResolve(plr, ps);
 
                 if (ps.Ledger.Count == 0 || plr.Entity == null) continue;
-                var pos = plr.Entity.ServerPos.AsBlockPos;
+                var pos = plr.Entity.Pos.AsBlockPos;
 
                 if (!recentRecall.TryGetValue(plr.PlayerUID, out var seen))
                     seen = recentRecall[plr.PlayerUID] = new HashSet<int>();

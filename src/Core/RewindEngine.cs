@@ -320,7 +320,6 @@ namespace Shinimodori.Core
                 entity.FromBytes(r, false);
             }
             // SpawnEntity assigns a fresh EntityId and runs Initialize/AfterInitialized.
-            entity.Pos.SetFrom(entity.ServerPos);
             sapi.World.SpawnEntity(entity);
             return true;
         }
@@ -334,8 +333,6 @@ namespace Shinimodori.Core
                 e.FromBytes(r, false);
             }
             e.EntityId = keepId;
-            e.Pos.SetFrom(e.ServerPos);
-            e.ServerPos.Motion.Set(0, 0, 0);
             e.Pos.Motion.Set(0, 0, 0);
         }
 
@@ -352,7 +349,7 @@ namespace Shinimodori.Core
 
             var bulk = sapi.World.GetBlockAccessorBulkUpdate(true, true);
             var withBlockEntities = new List<BlockDelta>();
-            var pos = new BlockPos();
+            var pos = new BlockPos(0);
 
             for (int i = blockCursor; i < end; i++)
             {
@@ -399,7 +396,7 @@ namespace Shinimodori.Core
             if (reverseOrder == null || reverseOrder.Count == 0) return;
 
             var acc = sapi.World.BlockAccessor;
-            var pos = new BlockPos();
+            var pos = new BlockPos(0);
             var pending = new List<PosKey>();
 
             for (int sweep = 0; sweep < 2; sweep++)
@@ -523,7 +520,7 @@ namespace Shinimodori.Core
             int checks = Math.Min(n, journal.TouchOrder.Count);
             int mismatches = 0;
             var acc = sapi.World.BlockAccessor;
-            var pos = new BlockPos();
+            var pos = new BlockPos(0);
 
             for (int i = 0; i < checks; i++)
             {
