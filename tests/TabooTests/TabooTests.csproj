@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TabooTests</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- The detector is deliberately free of engine dependencies so it can be
+         compiled straight into the test binary. -->
+    <Compile Include="../../src/Taboo/TabooDetector.cs" />
+    <Compile Include="Program.cs" />
+  </ItemGroup>
+</Project>
