@@ -131,7 +131,8 @@ namespace Shinimodori.Commands
                     server.Cfg.Debug.FuzzJournalFailures = savedFuzz;
 
                     Say($"rewind {result.Outcome} in {result.ElapsedMs}ms — " +
-                        $"{result.BlocksRestored} blocks, {result.BlockEntitiesRestored} block entities, " +
+                        $"{result.BlocksRestored} blocks ({result.BlocksReconciled} reconciled), " +
+                        $"{result.BlockEntitiesRestored} block entities, " +
                         $"{result.EntitiesRemoved} removed, {result.EntitiesRespawned} respawned, " +
                         $"{result.ItemEntitiesRemoved} items swept" +
                         (string.IsNullOrEmpty(result.Note) ? "" : $" [{result.Note}]"));

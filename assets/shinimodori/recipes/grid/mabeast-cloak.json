@@ -2,7 +2,7 @@
 	ingredientPattern: "PPP,PLP,P_P",
 	ingredients: {
 		"P": { type: "item", code: "shinimodori:mabeast-pelt" },
-		"L": { type: "item", code: "game:leather-plain" }
+		"L": { type: "item", code: "game:leather-normal-plain" }
 	},
 	width: 3,
 	height: 3,

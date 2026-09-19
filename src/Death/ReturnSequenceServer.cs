@@ -320,9 +320,10 @@ namespace Shinimodori.Death
                 if (Cfg.Debug.LogRewindTimings)
                 {
                     Api.Logger.Notification(
-                        "[shinimodori] Rewind {0} in {1}ms — {2} blocks, {3} block entities, " +
-                        "{4} removed, {5} respawned, {6} restored, {7} items swept{8}",
-                        result.Outcome, result.ElapsedMs, result.BlocksRestored, result.BlockEntitiesRestored,
+                        "[shinimodori] Rewind {0} in {1}ms — {2} blocks ({3} reconciled), {4} block entities, " +
+                        "{5} removed, {6} respawned, {7} restored, {8} items swept{9}",
+                        result.Outcome, result.ElapsedMs, result.BlocksRestored, result.BlocksReconciled,
+                        result.BlockEntitiesRestored,
                         result.EntitiesRemoved, result.EntitiesRespawned, result.EntitiesRestored,
                         result.ItemEntitiesRemoved,
                         string.IsNullOrEmpty(result.Note) ? "" : " (" + result.Note + ")");
@@ -446,10 +447,23 @@ namespace Shinimodori.Death
             server.SyncState(plr);
         }
 
+        /// <summary>
+        /// Drops a run whose player has gone. The debt is recorded separately and is
+        /// settled on rejoin; what must not happen is this machine ticking forever
+        /// against a player who is not there.
+        /// </summary>
+        public void AbandonRun(string playerUid)
+        {
+            if (!runs.Remove(playerUid)) return;
+            if (!AnyReturning && server.Freezer.IsFrozen) server.Freezer.Thaw();
+            server.Recorder.Suspended = false;
+        }
+
         public void Dispose()
         {
             if (tickListener != -1) Api.Event.UnregisterGameTickListener(tickListener);
             tickListener = -1;
+            runs.Clear();
         }
     }
 }

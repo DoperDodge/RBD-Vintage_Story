@@ -174,6 +174,36 @@ is the seatbelt. It has never been optional.
 
 ---
 
+## What has actually been tested
+
+Run against a real Vintage Story 1.22.7 dedicated server, not a mock:
+
+```
+/rbd selftest 20000
+  engine reported 20040 block write(s); journal kept 20000 distinct position(s)
+  rewind Success in 231ms — 20000 blocks (6 reconciled), 6 entities removed
+  blocks: 20000/20000 restored exactly
+  clock:  back to 872.00 (anchor 872.00, error 0.000h)
+  PASS — the world is byte-identical at every touched position.
+
+/rbd selftest 500 true          (journal handlers forced to throw)
+  journal: integrity=LOST
+  rewind SafeMode — player restored, world untouched
+  PASS — forced journal failures landed in SafeMode, as designed
+```
+
+The 40-write gap between "engine reported" and "journal kept" is the test
+deliberately touching 40 positions twice: copy-on-first-touch collapses them, as
+it should.
+
+The taboo corpus passes 80/80, and the server log is clean of mod errors at boot.
+
+**Not tested:** anything needing a GPU or a sound device. The renderers, the GUI
+dialogs, the hotkeys and the audio playback compile and are wired, but no client
+has run them. Treat the presentation layer as unproven until you have played it.
+
+---
+
 ## Credits
 
 Built by DoperDodge, from a design document written for the purpose.

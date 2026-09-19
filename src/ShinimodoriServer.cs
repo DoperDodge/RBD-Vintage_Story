@@ -173,7 +173,12 @@ namespace Shinimodori
 
         private void OnPlayerDisconnect(IServerPlayer plr)
         {
-            if (Returns.IsReturning(plr.PlayerUID)) State.MidReturn.Add(plr.PlayerUID);
+            if (!Returns.IsReturning(plr.PlayerUID)) return;
+
+            // Remember that they owe a return, and stop driving the one they left
+            // behind — otherwise its state machine ticks forever against nobody.
+            State.MidReturn.Add(plr.PlayerUID);
+            Returns.AbandonRun(plr.PlayerUID);
         }
 
         // ------------------------------------------------------------------ helpers
@@ -242,6 +247,16 @@ namespace Shinimodori
         public void Dispose()
         {
             if (saveTickListener != -1) Api.Event.UnregisterGameTickListener(saveTickListener);
+
+            // Never leave the world frozen or a return half-run behind us.
+            try { Freezer?.Thaw(); } catch (Exception) { }
+            Returns?.Dispose();
+
+            Api.Event.SaveGameLoaded -= OnSaveGameLoaded;
+            Api.Event.GameWorldSave -= OnGameWorldSave;
+            Api.Event.PlayerNowPlaying -= OnPlayerNowPlaying;
+            Api.Event.PlayerDisconnect -= OnPlayerDisconnect;
+
             Recorder?.Unregister();
             Anchors?.Unregister();
             Miasma?.Unregister();

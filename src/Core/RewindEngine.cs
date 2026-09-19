@@ -18,6 +18,8 @@ namespace Shinimodori.Core
     {
         public RewindOutcome Outcome;
         public int BlocksRestored;
+        /// <summary>Positions that needed a second write because their support moved under them.</summary>
+        public int BlocksReconciled;
         public int BlockEntitiesRestored;
         public int EntitiesRemoved;
         public int EntitiesRespawned;
@@ -207,6 +209,7 @@ namespace Shinimodori.Core
                 bool blocksDone = RestoreBlockBatch();
                 if (!blocksDone) return;
 
+                ReconcileBlocks();
                 RestoreCalendar();
                 RestorePlayers();
                 Verify();
@@ -378,6 +381,71 @@ namespace Shinimodori.Core
 
             blockCursor = end;
             return blockCursor >= reverseOrder.Count;
+        }
+
+        /// <summary>
+        /// Second pass over everything the block pass wrote, fixing whatever did not
+        /// stick.
+        ///
+        /// A block that needs support — grass, a flower, a torch — is broken again by
+        /// the neighbour update that follows its own commit, because the block holding
+        /// it up is still queued in a later batch. Writing the survivors once more,
+        /// lowest first, settles those chains. Two sweeps is enough for any real
+        /// support chain; a third would mean something else is wrong, and silently
+        /// looping on it would hide that.
+        /// </summary>
+        private void ReconcileBlocks()
+        {
+            if (reverseOrder == null || reverseOrder.Count == 0) return;
+
+            var acc = sapi.World.BlockAccessor;
+            var pos = new BlockPos();
+            var pending = new List<PosKey>();
+
+            for (int sweep = 0; sweep < 2; sweep++)
+            {
+                pending.Clear();
+
+                foreach (var key in reverseOrder)
+                {
+                    var d = journal.Blocks[key];
+                    pos.Set(d.X, d.Y, d.Z);
+                    pos.dimension = d.Dim;
+                    try
+                    {
+                        var solid = acc.GetBlock(pos, BlockLayersAccess.Solid);
+                        var fluid = acc.GetBlock(pos, BlockLayersAccess.Fluid);
+                        if ((solid?.BlockId ?? 0) != d.OldSolidId || (fluid?.BlockId ?? 0) != d.OldFluidId)
+                            pending.Add(key);
+                    }
+                    catch { }
+                }
+
+                if (pending.Count == 0) return;
+
+                // Lowest first, so whatever holds a block up is in place before it is.
+                pending.Sort((a, b) => a.Y.CompareTo(b.Y));
+
+                var bulk = sapi.World.GetBlockAccessorBulkUpdate(true, true);
+                foreach (var key in pending)
+                {
+                    var d = journal.Blocks[key];
+                    pos.Set(d.X, d.Y, d.Z);
+                    pos.dimension = d.Dim;
+                    try
+                    {
+                        bulk.SetBlock(d.OldSolidId, pos, BlockLayersAccess.Solid);
+                        bulk.SetBlock(d.OldFluidId, pos, BlockLayersAccess.Fluid);
+                        result.BlocksReconciled++;
+                    }
+                    catch (Exception e) { onWarn($"reconcile failed at {d.X},{d.Y},{d.Z}: {e.Message}"); }
+                }
+                try { bulk.Commit(); }
+                catch (Exception e) { onWarn($"reconcile commit failed: {e.Message}"); }
+            }
+
+            if (pending.Count > 0)
+                onWarn($"{pending.Count} position(s) would not settle after two reconcile sweeps");
         }
 
         private void RestoreBlockEntity(BlockDelta d)
