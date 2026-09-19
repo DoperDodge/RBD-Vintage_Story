@@ -138,6 +138,23 @@ namespace Shinimodori.Commands
                     .HandleWith(args => Preset(sapi, server, args))
                 .EndSubCommand()
 
+                .BeginSubCommand("selftest")
+                    .WithDescription("[admin] Anchor, wreck the world, rewind, and check it came back")
+                    .RequiresPrivilege(Privilege.controlserver)
+                    .WithArgs(parsers.OptionalInt("blocks"), parsers.OptionalBool("fuzz"))
+                    .HandleWith(args =>
+                    {
+                        int blocks = args[0] == null ? 600 : Math.Max(10, (int)args[0]);
+                        bool fuzz = args[1] != null && (bool)args[1];
+                        var caller = args.Caller;
+                        new RewindSelfTest(server).Run(blocks, fuzz, text =>
+                            sapi.Logger.Notification("[shinimodori selftest] result:\n" + text));
+                        return TextCommandResult.Success(
+                            $"Self-test running over {blocks} blocks{(fuzz ? " with journal fuzzing" : "")}. " +
+                            "Results go to the server log.");
+                    })
+                .EndSubCommand()
+
                 .BeginSubCommand("mabeasts")
                     .WithDescription("[admin] Send a pack after yourself")
                     .RequiresPrivilege(Privilege.controlserver)

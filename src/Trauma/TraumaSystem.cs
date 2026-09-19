@@ -135,6 +135,30 @@ namespace Shinimodori.Trauma
         public float OutgoingDamageMultiplier(PlayerState ps) =>
             HasResolve(ps) ? 1f + T.ResolveDamageBonus : 1f;
 
+        private const string ResolveStatKey = "shinimodori:resolve";
+
+        /// <summary>
+        /// Applies or clears Resolve's damage bonus. Written as an entity stat so the
+        /// game's own blending applies it to every weapon, rather than the mod having
+        /// to intercept each attack.
+        /// </summary>
+        private void ApplyResolve(IServerPlayer plr, PlayerState ps)
+        {
+            var e = plr.Entity;
+            if (e == null) return;
+
+            if (HasResolve(ps))
+            {
+                e.Stats.Set("meleeWeaponsDamage", ResolveStatKey, T.ResolveDamageBonus, false);
+                e.Stats.Set("rangedWeaponsDamage", ResolveStatKey, T.ResolveDamageBonus, false);
+            }
+            else
+            {
+                e.Stats.Remove("meleeWeaponsDamage", ResolveStatKey);
+                e.Stats.Remove("rangedWeaponsDamage", ResolveStatKey);
+            }
+        }
+
         // ----------------------------------------------------------------- ledger
 
         public void OnDeathRecorded(IServerPlayer plr, PlayerState ps, BlockPos pos, DeathCause cause)
@@ -160,6 +184,7 @@ namespace Shinimodori.Trauma
                 if (server.Returns.IsReturning(plr.PlayerUID)) continue;
 
                 ApplyPhantomPain(plr, ps, now);
+                ApplyResolve(plr, ps);
 
                 if (ps.Ledger.Count == 0 || plr.Entity == null) continue;
                 var pos = plr.Entity.ServerPos.AsBlockPos;

@@ -39,6 +39,7 @@ namespace Shinimodori
             api.RegisterEntityBehaviorClass(EntityBehaviorReturner.Name, typeof(EntityBehaviorReturner));
             api.RegisterEntityBehaviorClass(ScentAggroBehavior.Name, typeof(ScentAggroBehavior));
             api.RegisterEntityBehaviorClass(ScentAversionBehavior.Name, typeof(ScentAversionBehavior));
+            api.RegisterItemClass("WitchGift", typeof(ItemWitchGift));
 
             if (Config == null) Config = ConfigPresets.LoadOrCreate(api, ConfigFile);
         }
@@ -53,10 +54,24 @@ namespace Shinimodori
 
             HarmonyPatches.Apply(sapi.Logger);
 
-            Server = new ShinimodoriServer();
-            Server.Start(sapi, Config);
-
-            ShinimodoriCommands.Register(sapi, Server);
+            try
+            {
+                Server = new ShinimodoriServer();
+                Server.Start(sapi, Config);
+                ShinimodoriCommands.Register(sapi, Server);
+            }
+            catch (Exception e)
+            {
+                // A half-started death-interception mod is far more dangerous than a
+                // missing one: it could swallow a death it cannot then undo. Tear the
+                // whole thing down and let the world run vanilla.
+                sapi.Logger.Error("[shinimodori] Startup failed, disabling the mod for this session " +
+                                  "so the world behaves normally: {0}", e);
+                try { Server?.Dispose(); } catch (Exception) { }
+                HarmonyPatches.Unapply(sapi.Logger);
+                Server = null;
+                return;
+            }
 
             if (!ShinimodoriBridge.BlockPatchesActive)
             {

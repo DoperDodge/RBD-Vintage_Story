@@ -26,10 +26,15 @@ namespace Shinimodori.Miasma
         private MiasmaConfig M => server.Cfg.Miasma;
 
         private long tickListener = -1;
-        private double lastDecayHours;
+        /// <summary>MinValue until the first tick: the calendar does not exist yet at StartServerSide.</summary>
+        private double lastDecayHours = double.MinValue;
         /// <summary>Living mabeasts per player, so a pack does not become an infestation.</summary>
         private readonly Dictionary<string, List<long>> packs = new Dictionary<string, List<long>>();
-        private double lastPackRollHours;
+        private double lastPackRollHours = double.MinValue;
+        /// <summary>Temporal gears each player was carrying last tick, to spot one being spent.</summary>
+        private readonly Dictionary<string, int> gearCount = new Dictionary<string, int>();
+        /// <summary>When each player last saw something at the edge of their vision.</summary>
+        private readonly Dictionary<string, double> lastSilhouetteHours = new Dictionary<string, double>();
 
         public MiasmaSystem(ShinimodoriServer server) { this.server = server; }
 
@@ -38,8 +43,6 @@ namespace Shinimodori.Miasma
             tickListener = Api.Event.RegisterGameTickListener(OnTick, 2000);
             Api.Event.OnEntitySpawn += OnEntitySpawn;
             Api.Event.OnEntityLoaded += OnEntitySpawn;
-            lastDecayHours = Api.World.Calendar.TotalHours;
-            lastPackRollHours = lastDecayHours;
 
             var stability = Api.ModLoader.GetModSystem<SystemTemporalStability>();
             if (stability != null) stability.OnGetTemporalStability += OnGetTemporalStability;
@@ -76,14 +79,26 @@ namespace Shinimodori.Miasma
         public float DetectionMultiplierFor(int tier) => Tier(tier).DetectionMultiplier;
         public bool TradersRefuseAt(int tier) => Tier(tier).TradersRefuse;
 
+        /// <summary>
+        /// True while the player is carrying the mabeast cloak. Vanilla has no cloak
+        /// equipment slot to hang it on, so carrying it is what counts — which also
+        /// means it costs you a stack of inventory for as long as you want the cover.
+        /// </summary>
         public bool IsWearingPeltCloak(IServerPlayer plr)
         {
-            var inv = plr.InventoryManager?.GetOwnInventory(Vintagestory.API.Config.GlobalConstants.characterInvClassName);
-            if (inv == null) return false;
-            foreach (var slot in inv)
+            var invs = plr?.InventoryManager?.Inventories;
+            if (invs == null) return false;
+
+            foreach (var kv in invs)
             {
-                var code = slot?.Itemstack?.Collectible?.Code?.Path;
-                if (code != null && code.Contains("mabeast") && code.Contains("cloak")) return true;
+                if (kv.Value == null) continue;
+                if (kv.Value.ClassName == Vintagestory.API.Config.GlobalConstants.creativeInvClassName) continue;
+                foreach (var slot in kv.Value)
+                {
+                    var collectible = slot?.Itemstack?.Collectible;
+                    if (collectible == null) continue;
+                    if (collectible.Attributes?["shinimodoriPeltCloak"].AsBool() == true) return true;
+                }
             }
             return false;
         }
@@ -116,6 +131,61 @@ namespace Shinimodori.Miasma
             server.Debug($"{plr.PlayerName} miasma -> {ps.Miasma:F1} (+{gain:F1})");
         }
 
+        /// <summary>
+        /// Notices a temporal gear being spent, however it was spent — repairing a
+        /// translocator, feeding a rift, or another mod's use of it. Counting what the
+        /// player carries beats patching one specific item class, and it keeps working
+        /// when somebody else adds a new way to burn one.
+        /// </summary>
+        private void WatchForSpentGear(IServerPlayer plr, PlayerState ps)
+        {
+            int now = CountTemporalGears(plr);
+            if (gearCount.TryGetValue(plr.PlayerUID, out int before) && now < before)
+                TryBurnWithTemporalGear(plr, ps);
+            gearCount[plr.PlayerUID] = now;
+        }
+
+        private static int CountTemporalGears(IServerPlayer plr)
+        {
+            var invs = plr?.InventoryManager?.Inventories;
+            if (invs == null) return 0;
+            int n = 0;
+            foreach (var kv in invs)
+            {
+                if (kv.Value == null) continue;
+                if (kv.Value.ClassName == Vintagestory.API.Config.GlobalConstants.creativeInvClassName) continue;
+                foreach (var slot in kv.Value)
+                {
+                    var code = slot?.Itemstack?.Collectible?.Code?.Path;
+                    if (code != null && code.StartsWith("gear-temporal", StringComparison.Ordinal))
+                        n += slot.Itemstack.StackSize;
+                }
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// A figure at the far edge of the screen, for two seconds, in the direction
+        /// the player is not looking. No sound. No mechanical effect. Ever (§12.5).
+        /// </summary>
+        private void RollPeripheralSilhouette(IServerPlayer plr, PlayerState ps, double now)
+        {
+            if (!Cfg.Visuals.PeripheralSilhouettes) return;
+            if (ps.Miasma < M.ClingThreshold) return;
+
+            double interval = Cfg.Visuals.SilhouetteIntervalMinutes / 60.0;
+            if (lastSilhouetteHours.TryGetValue(plr.PlayerUID, out double last) && now - last < interval) return;
+            if (!lastSilhouetteHours.ContainsKey(plr.PlayerUID))
+            {
+                // Do not fire the instant they cross the threshold.
+                lastSilhouetteHours[plr.PlayerUID] = now;
+                return;
+            }
+
+            lastSilhouetteHours[plr.PlayerUID] = now;
+            server.SendCue(plr, "silhouette", 1f, 2f);
+        }
+
         /// <summary>Consuming a temporal gear burns the scent off — the one lever, and it costs (§8).</summary>
         public bool TryBurnWithTemporalGear(IServerPlayer plr, PlayerState ps)
         {
@@ -133,6 +203,14 @@ namespace Shinimodori.Miasma
         {
             if (!Cfg.Core.Enabled) return;
             double now = Api.World.Calendar.TotalHours;
+            if (lastDecayHours <= double.MinValue)
+            {
+                // First tick after the world exists. Nothing has elapsed yet.
+                lastDecayHours = now;
+                lastPackRollHours = now;
+                return;
+            }
+
             double elapsed = now - lastDecayHours;
             if (elapsed <= 0) { lastDecayHours = now; return; }   // the clock just rewound
             lastDecayHours = now;
@@ -154,6 +232,8 @@ namespace Shinimodori.Miasma
                 }
 
                 ApplyStabilityDrain(plr, ps, elapsed);
+                WatchForSpentGear(plr, ps);
+                RollPeripheralSilhouette(plr, ps, now);
                 server.SyncState(plr);
             }
 

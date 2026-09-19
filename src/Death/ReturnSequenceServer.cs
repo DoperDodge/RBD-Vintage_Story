@@ -365,6 +365,7 @@ namespace Shinimodori.Death
             server.Miasma.OnReturn(plr, ps, run.Cause, run.Voluntary);
             server.Trauma.OnArrival(plr, ps, run.Cause);
             server.Miasma.TearTemporalFabric(plr);
+            server.AuthoritySystem.CheckUnlock(plr, ps);
 
             var complete = new PktReturnComplete
             {

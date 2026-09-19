@@ -27,6 +27,9 @@ namespace Shinimodori.Compat
 
         /// <summary>True when the block-write patches applied; false means degraded journaling.</summary>
         public static bool BlockPatchesActive;
+
+        /// <summary>Diagnostic counter: how many block writes the engine has told us about.</summary>
+        public static long BlockWritesSeen;
         /// <summary>True when the death patch applied; false means the post-death fallback is in use.</summary>
         public static bool DiePatchActive;
 
@@ -137,6 +140,7 @@ namespace Shinimodori.Compat
         {
             var rec = ShinimodoriBridge.Recorder;
             if (rec == null) return;
+            ShinimodoriBridge.BlockWritesSeen++;
             try { rec.OnBlockWillChange(pos); } catch { /* never break a world write */ }
         }
 
@@ -144,6 +148,7 @@ namespace Shinimodori.Compat
         {
             var rec = ShinimodoriBridge.Recorder;
             if (rec == null) return;
+            ShinimodoriBridge.BlockWritesSeen++;
             try { rec.OnBlockWillChange(pos); } catch { }
         }
 

@@ -1,0 +1,10 @@
+{
+	code: "mabeast-pelt",
+	shape: { base: "game:item/basic/flat" },
+	textures: { "tex": { base: "shinimodori:item/mabeast-pelt" } },
+	creativeinventory: { "general": ["*"], "items": ["*"] },
+	maxstacksize: 16,
+	materialDensity: 300,
+	guiTransform: { scale: 1.9 },
+	groundTransform: { scale: 2.6 }
+}

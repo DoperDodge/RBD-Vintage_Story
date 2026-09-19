@@ -1,0 +1,13 @@
+{
+	code: "mabeast-cloak",
+	// The only real counterplay the world offers: carrying it lowers your
+	// effective miasma tier by one (§6.4). It does not remove the scent.
+	shape: { base: "game:item/basic/flat" },
+	textures: { "tex": { base: "shinimodori:item/mabeast-cloak" } },
+	creativeinventory: { "general": ["*"], "items": ["*"] },
+	maxstacksize: 1,
+	materialDensity: 400,
+	attributes: { shinimodoriPeltCloak: true },
+	guiTransform: { scale: 1.8 },
+	groundTransform: { scale: 2.6 }
+}

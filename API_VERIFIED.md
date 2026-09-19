@@ -30,6 +30,13 @@ deviations, recorded here as §0 of the plan demands.
 | "OnEntityReceiveDamage(DamageSource, ref float)" | **correct**, exactly as written | used as-is |
 | "Harmony prefix on `EntityPlayer.Die`" | `Entity.Die(EnumDespawnReason = Death, DamageSource = null)` is `virtual` on `Entity`; `EntityPlayer` does not redeclare it | prefix targets `Entity.Die`, filtered to `EntityPlayer` at runtime |
 | `sapi.Event.OnEntitySpawn` etc. live on `IServerEventAPI` | they live on the **base** `IEventAPI` | subscribed via `sapi.Event` all the same (inherited) |
+| — | `sapi.World.Calendar` **does not exist yet** during `StartServerSide`; reading it there throws | every calendar read is deferred to the first game tick. Found by booting a real server, not by reading docs |
+| `AiTaskSeekEntity.seekingRange` can be assigned | the field is `protected`, and the public `NowSeekRange` is overwritten from it at the top of every `ShouldExecute`, so it is not a usable seam | a cached `FieldInfo` writes the protected field; if a future version renames it the behaviour no-ops instead of throwing on every predator alive |
+| "book/scroll/parchment" writing (§7.2) | vanilla 1.22.7 has **no writable book or scroll item**. `BlockEntitySign` (and sign posts) are the only writing surfaces | the erasure hooks `BlockEntitySign.OnReceivedClientPacket`; signs are the whole surface |
+| `leather-plain` | the item is `leather-normal-plain` | the cloak recipe uses the real code. Found by the server rejecting the recipe at load |
+| Mabeast pelt cloak is worn (§6.4) | vanilla has no cloak/back equipment slot to attach a custom wearable to | the cloak works while **carried** in any inventory. It still costs a slot for as long as you want the cover |
+| Custom GLSL shaders with a quad fallback (§12.2) | the fallback path is the one that cannot fail, and rendering could not be verified in a headless build environment | the quad path is promoted to being the **only** path. No shader can fail to compile, and the result is identical on every GPU. `Visuals.UseCustomShaders` is reserved and currently inert |
+| Ship shaders, textures and sounds as files (§2.2) | — | textures are drawn at runtime with Cairo, and the audio is synthesised by `scripts/generate_sounds.py`. The mod carries no asset that came from anywhere else |
 
 ---
 
@@ -333,3 +340,64 @@ class AiTaskManager {
     void ExecuteTask<T>();  T GetTask<T>();  IEnumerable<TTask> GetTasks<TTask>()
 }
 ```
+
+
+---
+
+## 16. Block writes: where the journal actually hooks
+
+Player events (`DidBreakBlock`, `DidPlaceBlock`, `DidUseBlock`) only see changes a
+*player* made. Fluids spreading, crops ripening, fire eating a roof and any other
+mod's bulk edit raise none of them, so a journal built on those events would undo
+a player-shaped subset of the world and quietly leave the rest.
+
+Decompiling the engine shows two distinct write paths, and both are patched:
+
+```csharp
+// Single writes funnel here (Vintagestory.Common.BlockAccessorBase):
+protected void SetSolidBlockInternal(int blockId, BlockPos pos, IWorldChunk chunk,
+                                     bool synchronize, bool relight, ItemStack byItemstack)
+protected void SetFluidBlockInternal(int fluidBlockid, BlockPos pos, IWorldChunk chunk,
+                                     bool synchronize, bool relight)
+
+// Bulk writes DO NOT go through those. Commit() writes the chunk arrays directly:
+//   worldChunk.Data[index3d] = blockUpdate.NewSolidBlockId;
+//   worldChunk.Data.SetFluid(index3d, blockUpdate.NewFluidBlockId);
+// so BlockAccessorRelaxedBulkUpdate.Commit() is patched separately, and reads
+// StagedBlocks before the write lands.
+public override List<BlockUpdate> Commit()
+```
+
+`IBlockAccessorRevertable` looks like it should solve this and does not: it only
+tracks edits made through that one accessor instance, which is why the world-edit
+tool uses it and the journal cannot.
+
+## 17. Entity lifecycle facts the rewind depends on
+
+```csharp
+// Entity.Die — verified by decompilation:
+//   "Entities only drop something on EnumDespawnReason.Death"
+// so Die(EnumDespawnReason.Removed) fires no death event, drops nothing, and
+// simply marks the entity for removal. That is how a rewind un-spawns things.
+
+// ServerMain.SpawnEntity assigns a FRESH EntityId (++SaveGameData.LastEntityId)
+// and calls Initialize(type.Clone(), api, chunkIndex) + AfterInitialized(true).
+// Respawned entities therefore do not keep their old id — which is fine, because
+// the journal is cleared by the same return that respawned them.
+
+// Entity.ToBytes(writer, forClient: false) writes the game version, then the
+// EntityId, attributes, position and Code. It does NOT write the entity class,
+// so the class (or the resolved EntityProperties) has to be stored alongside it.
+```
+
+## 18. What a headless server can and cannot prove
+
+`scripts/server_test.sh` boots the real dedicated server with the mod installed and
+drives it through the console. That covers mod loading, asset parsing, recipe
+resolution, command registration, Harmony patching, persistence, and — via
+`/rbd selftest` — the rewind engine end to end against real chunks.
+
+It cannot cover anything that needs a rendering context or an audio device: the
+renderers, the shaders-that-aren't, the GUI dialogs, the hotkeys, and the sound
+playback are all compiled and wired but unverified at runtime. That limit is
+stated in the README and in the pull request rather than being papered over.
